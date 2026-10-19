@@ -11,13 +11,9 @@ import {
   Platform,
   Modal,
 } from 'react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import {
-  authService,
-  DriverRegisterRequest,
-  SupervisorRegisterRequest,
-} from '../../src/services/authService';
+import { authService, DriverRegisterRequest } from '../../src/services/authService';
 import { useAuthStore } from '../../src/store/authStore';
 import { colors, radius, spacing } from '../../src/theme';
 
@@ -32,15 +28,6 @@ import { useResponsive } from '../../src/hooks/useResponsive';
 
 export const SCK_FLEET_VEHICLES = SCK_FLEET;
 
-export const PORT_TERMINALS = [
-  { code: 'CICT', name: 'Colombo International Container Terminals', color: '#00e5ff' },
-  { code: 'SAGT', name: 'South Asia Gateway Terminals', color: '#22ef7e' },
-  { code: 'JCT', name: 'Jaya Container Terminal', color: '#feb300' },
-  { code: 'ECT', name: 'East Container Terminal', color: '#a855f7' },
-  { code: 'CWIT', name: 'Colombo West International Terminal', color: '#ec4899' },
-  { code: 'UCT', name: 'Unity Container Terminal', color: '#3b82f6' },
-];
-
 export function findFleetVehicle(input?: string) {
   return findFleetVehicleCore(input) || null;
 }
@@ -49,13 +36,6 @@ export default function DriverRegisterScreen() {
   const router = useRouter();
   const login = useAuthStore((s) => s.login);
   const { topInset, bottomInset, contentMaxWidth, containerPaddingHorizontal } = useResponsive();
-
-  // Role state
-  const params = useLocalSearchParams<{ role?: string }>();
-  const [regRole, setRegRole] = useState<'DRIVER' | 'SUPERVISOR'>(
-    params.role?.toLowerCase() === 'supervisor' ? 'SUPERVISOR' : 'DRIVER'
-  );
-  const [assignedTerminal, setAssignedTerminal] = useState('CICT');
 
   // Form states
   const [fullName, setFullName] = useState('');
@@ -95,37 +75,21 @@ export default function DriverRegisterScreen() {
 
   const handleQuickAutoFill = () => {
     const randomSuffix = String(Math.floor(1000 + Math.random() * 9000));
-    if (regRole === 'SUPERVISOR') {
-      setFullName('Nimal Samantha Silva');
-      setNic(`1990${randomSuffix}012V`);
-      setEmployeeId(`SUP-${randomSuffix}`);
-      setMobileNumber(`071${randomSuffix}99`);
-      setAddress('No. 12, Galle Face Road, Colombo 03');
-      setDateOfBirth('1990-05-20');
-      setAssignedTerminal('CICT');
-      setEmail(`supervisor${randomSuffix}@smartitt.lk`);
-      setEmergencyContactName('Amara Silva (Spouse)');
-      setEmergencyContactNumber('0719876543');
-      setPassword('Password@123');
-      setConfirmPassword('Password@123');
-      setFormError(null);
-    } else {
-      setFullName('Kasun Chamara Perera');
-      setNic(`1992${randomSuffix}042V`);
-      setEmployeeId(`EMP-${randomSuffix}`);
-      setMobileNumber(`077${randomSuffix}21`);
-      setAddress('No. 45/B, Port Access Road, Colombo 13');
-      setLicenseNumber(`B-${randomSuffix}88`);
-      setLicenseExpiryDate('2030-12-31');
-      setDateOfBirth('1992-06-15');
-      setEmergencyContactName('Nayana Perera');
-      setEmergencyContactNumber('0719876543');
-      setVehicleNumber('LY 5234'); // Instantly links to CHE: SCK 100 (SCK Logistics)!
-      setEmail(`driver${randomSuffix}@smartitt.lk`);
-      setPassword('Password@123');
-      setConfirmPassword('Password@123');
-      setFormError(null);
-    }
+    setFullName('Kasun Chamara Perera');
+    setNic(`1992${randomSuffix}042V`);
+    setEmployeeId(`EMP-${randomSuffix}`);
+    setMobileNumber(`077${randomSuffix}21`);
+    setAddress('No. 45/B, Port Access Road, Colombo 13');
+    setLicenseNumber(`B-${randomSuffix}88`);
+    setLicenseExpiryDate('2030-12-31');
+    setDateOfBirth('1992-06-15');
+    setEmergencyContactName('Nayana Perera');
+    setEmergencyContactNumber('0719876543');
+    setVehicleNumber('LY 5234'); // Instantly links to CHE: SCK 100 (SCK Logistics)!
+    setEmail(`driver${randomSuffix}@smartitt.lk`);
+    setPassword('Password@123');
+    setConfirmPassword('Password@123');
+    setFormError(null);
   };
 
   const handleCopyCode = async () => {
@@ -157,82 +121,6 @@ export default function DriverRegisterScreen() {
     setLoading(true);
 
     const randSuffix = String(Math.floor(1000 + Math.random() * 9000));
-
-    // ─── SUPERVISOR REGISTRATION FLOW ───
-    if (regRole === 'SUPERVISOR') {
-      const resolvedFullName = fullName.trim() || 'Nimal Samantha Silva';
-      const resolvedNic = nic.trim() || `1990${randSuffix}012V`;
-      const resolvedEmployeeId = employeeId.trim() || `SUP-${randSuffix}`;
-      const resolvedMobile = mobileNumber.trim() || `071${randSuffix}99`;
-      const resolvedAddress = address.trim() || 'No. 12, Galle Face Road, Colombo 03';
-      const resolvedEmail = email.trim() || `supervisor${randSuffix}@smartitt.lk`;
-      const resolvedEmergencyName = emergencyContactName.trim() || 'Port Operations Control';
-      const resolvedEmergencyPhone = emergencyContactNumber.trim() || '0112456789';
-      const resolvedPassword = password.trim() || 'Password@123';
-      const resolvedConfirm = confirmPassword.trim() || resolvedPassword;
-
-      const payload: SupervisorRegisterRequest = {
-        fullName: resolvedFullName,
-        nic: resolvedNic,
-        employeeId: resolvedEmployeeId,
-        mobileNumber: resolvedMobile,
-        email: resolvedEmail,
-        terminalCode: assignedTerminal,
-        address: resolvedAddress,
-        dateOfBirth: dateOfBirth.trim() || '1990-05-20',
-        emergencyContactName: resolvedEmergencyName,
-        emergencyContactNumber: resolvedEmergencyPhone,
-        password: resolvedPassword,
-        confirmPassword: resolvedConfirm,
-      };
-
-      try {
-        const response = await authService.registerSupervisor(payload);
-        const supervisorCode = response.user.employeeId || response.user.username || resolvedEmail;
-        setGeneratedDriverCode(supervisorCode);
-        setRegisteredUser({
-          ...response.user,
-          role: 'SUPERVISOR',
-          token: response.token,
-          terminalCode: assignedTerminal,
-          fullName: resolvedFullName,
-          nic: resolvedNic,
-          employeeId: resolvedEmployeeId,
-          mobileNumber: resolvedMobile,
-          email: resolvedEmail,
-          address: resolvedAddress,
-          emergencyContactName: resolvedEmergencyName,
-          emergencyContactNumber: resolvedEmergencyPhone,
-        });
-        setSuccessModalVisible(true);
-      } catch (err: any) {
-        console.warn('Supervisor registration API fallback:', err);
-        const mockCode = `SUP-${randSuffix}`;
-        setGeneratedDriverCode(mockCode);
-        setRegisteredUser({
-          id: `mock-sup-${Date.now()}`,
-          username: resolvedEmail,
-          role: 'SUPERVISOR',
-          name: resolvedFullName,
-          token: `mock-sup-token-${Date.now()}`,
-          terminalCode: assignedTerminal,
-          fullName: resolvedFullName,
-          nic: resolvedNic,
-          employeeId: resolvedEmployeeId,
-          mobileNumber: resolvedMobile,
-          email: resolvedEmail,
-          address: resolvedAddress,
-          emergencyContactName: resolvedEmergencyName,
-          emergencyContactNumber: resolvedEmergencyPhone,
-        });
-        setSuccessModalVisible(true);
-      } finally {
-        setLoading(false);
-      }
-      return;
-    }
-
-    // ─── DRIVER REGISTRATION FLOW ───
     const resolvedFullName = fullName.trim() || 'Kasun Chamara Perera';
     const resolvedNic = nic.trim() || `1992${randSuffix}042V`;
     const resolvedEmployeeId = employeeId.trim() || `DRV-${randSuffix}`;
@@ -342,11 +230,7 @@ export default function DriverRegisterScreen() {
     if (registeredUser) {
       await login(registeredUser);
       setSuccessModalVisible(false);
-      if (registeredUser.role === 'SUPERVISOR' || regRole === 'SUPERVISOR') {
-        router.replace('/(supervisor)/(tabs)');
-      } else {
-        router.replace('/(driver)/(tabs)');
-      }
+      router.replace('/(driver)/(tabs)');
     } else {
       handleProceedToLogin();
     }
@@ -389,115 +273,30 @@ export default function DriverRegisterScreen() {
         {/* Hero Section */}
         <View style={styles.hero}>
           <View style={styles.logoBadge}>
-            <Ionicons name={regRole === 'SUPERVISOR' ? 'eye' : 'car-sport'} size={28} color={regRole === 'SUPERVISOR' ? '#feb300' : '#00e5ff'} />
+            <Ionicons name="cube" size={28} color="#00e5ff" />
           </View>
           <View style={{ flex: 1 }}>
             <Text style={styles.brandTitle}>SCK LOGISTICS PORT SYSTEM</Text>
-            <Text style={styles.brandSubtitle}>
-              {regRole === 'SUPERVISOR'
-                ? 'OFFICIAL PORT SUPERVISOR REGISTRATION'
-                : 'NEW OPERATOR REGISTRATION PORTAL'}
-            </Text>
+            <Text style={styles.brandSubtitle}>NEW OPERATOR REGISTRATION PORTAL</Text>
           </View>
         </View>
 
-        {/* Role Switcher Tabs */}
-        <View style={styles.roleTabsRow}>
-          <TouchableOpacity
-            style={[styles.roleTab, regRole === 'DRIVER' && styles.roleTabActiveCyan]}
-            onPress={() => setRegRole('DRIVER')}
-          >
-            <Ionicons
-              name="car-sport"
-              size={15}
-              color={regRole === 'DRIVER' ? '#00363d' : '#849396'}
-            />
-            <Text
-              style={[
-                styles.roleTabText,
-                regRole === 'DRIVER' && styles.roleTabTextActiveDark,
-              ]}
-            >
-              SCK DRIVER
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[
-              styles.roleTab,
-              regRole === 'SUPERVISOR' && styles.roleTabActiveAmber,
-            ]}
-            onPress={() => setRegRole('SUPERVISOR')}
-          >
-            <Ionicons
-              name="eye"
-              size={15}
-              color={regRole === 'SUPERVISOR' ? '#432c00' : '#849396'}
-            />
-            <Text
-              style={[
-                styles.roleTabText,
-                regRole === 'SUPERVISOR' && styles.roleTabTextActiveDark,
-              ]}
-            >
-              PORT SUPERVISOR
-            </Text>
-          </TouchableOpacity>
-        </View>
-
         {/* Informational Guidance Notice */}
-        <View
-          style={[
-            styles.noticeBox,
-            regRole === 'SUPERVISOR' && {
-              borderColor: '#feb300',
-              backgroundColor: 'rgba(254, 179, 0, 0.08)',
-            },
-          ]}
-        >
-          <Ionicons
-            name="information-circle"
-            size={18}
-            color={regRole === 'SUPERVISOR' ? '#feb300' : '#00e5ff'}
-          />
+        <View style={styles.noticeBox}>
+          <Ionicons name="information-circle" size={18} color="#00e5ff" />
           <Text style={styles.noticeText}>
-            {regRole === 'SUPERVISOR' ? (
-              <>
-                Register as an official <Text style={[styles.noticeBold, { color: '#feb300' }]}>Port Operations Supervisor</Text>. You will be provisioned access to oversee ITT transfer corridors, terminal gate clearances, and driver telematics across SLPA terminals (CICT, SAGT, JCT, ECT, CWIT, UCT).
-              </>
-            ) : (
-              <>
-                Upon completing registration, a unique <Text style={styles.noticeBold}>Operator Identification Number (e.g. DRV-00001)</Text> will be generated for you. You will use this exact identification number to log in to the driver cockpit.
-              </>
-            )}
+            Upon completing registration, a unique <Text style={styles.noticeBold}>Operator Identification Number (e.g. DRV-00001)</Text> will be generated for you. You will use this exact identification number to log in to the driver cockpit.
           </Text>
         </View>
 
         {/* Quick Demo Autofill Bar */}
         <TouchableOpacity
-          style={[
-            styles.autofillBtn,
-            regRole === 'SUPERVISOR' && {
-              borderColor: '#feb300',
-              backgroundColor: 'rgba(254, 179, 0, 0.12)',
-            },
-          ]}
+          style={styles.autofillBtn}
           onPress={handleQuickAutoFill}
           activeOpacity={0.85}
         >
-          <Ionicons
-            name="flash"
-            size={16}
-            color={regRole === 'SUPERVISOR' ? '#feb300' : '#00e5ff'}
-          />
-          <Text
-            style={[
-              styles.autofillBtnText,
-              regRole === 'SUPERVISOR' && { color: '#feb300' },
-            ]}
-          >
-            QUICK AUTO-FILL DEMO {regRole === 'SUPERVISOR' ? 'SUPERVISOR' : 'OPERATOR'} DETAILS
-          </Text>
+          <Ionicons name="flash" size={16} color="#00e5ff" />
+          <Text style={styles.autofillBtnText}>QUICK AUTO-FILL DEMO OPERATOR DETAILS</Text>
         </TouchableOpacity>
 
         {formError && (
@@ -510,19 +309,8 @@ export default function DriverRegisterScreen() {
         {/* ─── SECTION 1: Personal Information ─── */}
         <View style={styles.card}>
           <View style={styles.cardHeader}>
-            <Ionicons
-              name="person-circle"
-              size={18}
-              color={regRole === 'SUPERVISOR' ? '#feb300' : '#00e5ff'}
-            />
-            <Text
-              style={[
-                styles.cardHeaderText,
-                regRole === 'SUPERVISOR' && { color: '#feb300' },
-              ]}
-            >
-              1. {regRole === 'SUPERVISOR' ? 'SUPERVISOR' : 'OPERATOR'} PERSONAL INFORMATION
-            </Text>
+            <Ionicons name="person-circle" size={18} color="#00e5ff" />
+            <Text style={styles.cardHeaderText}>1. OPERATOR PERSONAL INFORMATION</Text>
           </View>
 
           <View style={styles.fieldGroup}>
@@ -584,320 +372,212 @@ export default function DriverRegisterScreen() {
           </View>
         </View>
 
-        {/* ─── SECTION 2: Employment / Appointment & Operational Details ─── */}
-        {regRole === 'SUPERVISOR' ? (
-          <View style={[styles.card, { borderColor: '#feb300' }]}>
-            <View style={styles.cardHeader}>
-              <Ionicons name="briefcase" size={18} color="#feb300" />
-              <Text style={[styles.cardHeaderText, { color: '#feb300' }]}>
-                2. PORT SUPERVISOR APPOINTMENT & TERMINAL ASSIGNMENT
-              </Text>
+        {/* ─── SECTION 2: Employment, License & Vehicle ─── */}
+        <View style={styles.card}>
+          <View style={styles.cardHeader}>
+            <Ionicons name="car" size={18} color="#feb300" />
+            <Text style={[styles.cardHeaderText, { color: '#feb300' }]}>
+              2. LICENSE & VEHICLE DETAILS
+            </Text>
+          </View>
+
+          <View style={styles.fieldGroup}>
+            <Text style={styles.fieldLabel}>PORT EMPLOYEE ID *</Text>
+            <View style={styles.inputWrap}>
+              <Ionicons name="business" size={16} color="#849396" style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                placeholder="e.g. EMP-092"
+                placeholderTextColor="#849396"
+                value={employeeId}
+                onChangeText={setEmployeeId}
+                autoCapitalize="characters"
+              />
+            </View>
+          </View>
+
+          <View style={styles.fieldGroup}>
+            <Text style={styles.fieldLabel}>MOBILE PHONE NUMBER *</Text>
+            <View style={styles.inputWrap}>
+              <Ionicons name="call" size={16} color="#849396" style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                placeholder="e.g. 0771234567"
+                placeholderTextColor="#849396"
+                keyboardType="phone-pad"
+                value={mobileNumber}
+                onChangeText={setMobileNumber}
+              />
+            </View>
+          </View>
+
+          <View style={styles.fieldGroup}>
+            <Text style={styles.fieldLabel}>DRIVING LICENSE NUMBER *</Text>
+            <View style={styles.inputWrap}>
+              <Ionicons name="id-card" size={16} color="#849396" style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                placeholder="e.g. B1234567"
+                placeholderTextColor="#849396"
+                value={licenseNumber}
+                onChangeText={setLicenseNumber}
+                autoCapitalize="characters"
+              />
+            </View>
+          </View>
+
+          <View style={styles.fieldGroup}>
+            <Text style={styles.fieldLabel}>LICENSE EXPIRY DATE (YYYY-MM-DD)</Text>
+            <View style={styles.inputWrap}>
+              <Ionicons name="time" size={16} color="#849396" style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                placeholder="2029-10-15"
+                placeholderTextColor="#849396"
+                value={licenseExpiryDate}
+                onChangeText={setLicenseExpiryDate}
+              />
+            </View>
+          </View>
+
+          <View style={styles.fieldGroup}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+              <Text style={styles.fieldLabel}>ASSIGNED TRUCK / VEHICLE NUMBER *</Text>
+              {detectedFleet && (
+                <View style={styles.cheBadgeInline}>
+                  <Ionicons name="checkmark-circle" size={11} color="#00ff88" />
+                  <Text style={styles.cheBadgeInlineText}>CHE {detectedFleet.cheNumber} DETECTED</Text>
+                </View>
+              )}
             </View>
 
-            {/* Assigned Port Terminal Picker */}
-            <View style={styles.fieldGroup}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                <Text style={styles.fieldLabel}>ASSIGNED PORT TERMINAL *</Text>
-                <View style={styles.cheBadgeInline}>
-                  <Ionicons name="location" size={11} color="#00ff88" />
-                  <Text style={styles.cheBadgeInlineText}>{assignedTerminal} SELECTED</Text>
+            <View style={[styles.inputWrap, detectedFleet && styles.inputWrapDetected]}>
+              <Ionicons name="bus" size={16} color={detectedFleet ? '#00e5ff' : '#feb300'} style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                placeholder="e.g. LY 5234, LY 6528, LY 5596..."
+                placeholderTextColor="#849396"
+                value={vehicleNumber}
+                onChangeText={setVehicleNumber}
+                autoCapitalize="characters"
+              />
+              {vehicleNumber.length > 0 && (
+                <TouchableOpacity onPress={() => setVehicleNumber('')} style={{ paddingHorizontal: 6 }}>
+                  <Ionicons name="close-circle" size={16} color="#849396" />
+                </TouchableOpacity>
+              )}
+            </View>
+
+            {/* AUTOMATICALLY DISPLAYED CHE NO (SCK NO) & OPERATOR CARD */}
+            {detectedFleet ? (
+              <View style={styles.cheAutoCard}>
+                <View style={styles.cheAutoHeader}>
+                  <View style={styles.cheLivePill}>
+                    <Ionicons name="hardware-chip" size={13} color="#00ff88" />
+                    <Text style={styles.cheLivePillText}>PORT TELEMATICS DETECTED</Text>
+                  </View>
+                  <Text style={styles.cheVerifiedText}>✓ FLEET VERIFIED</Text>
+                </View>
+
+                <View style={styles.cheInfoRow}>
+                  <View style={styles.cheBlock}>
+                    <Text style={styles.cheBlockLabel}>CHE NO (SCK NO)</Text>
+                    <Text style={styles.cheBlockValue}>{detectedFleet.cheNumber}</Text>
+                  </View>
+
+                  <View style={styles.cheDivider} />
+
+                  <View style={styles.cheBlockSmall}>
+                    <Text style={styles.cheBlockLabel}>TRAILER SIZE</Text>
+                    <View style={styles.cheSizePill}>
+                      <Ionicons name="cube" size={11} color="#feb300" />
+                      <Text style={styles.cheBlockSize}>{detectedFleet.trailerSize || '40FT'}</Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.cheDivider} />
+
+                  <View style={styles.cheBlock}>
+                    <Text style={styles.cheBlockLabel}>FLEET OPERATOR</Text>
+                    <Text style={styles.cheBlockOperator}>{detectedFleet.operator}</Text>
+                  </View>
+                </View>
+
+                <View style={styles.cheFooterNotice}>
+                  <Ionicons name="shield-checkmark" size={13} color="#00e5ff" />
+                  <Text style={styles.cheFooterNoticeText}>
+                    CHE {detectedFleet.cheNumber} • {detectedFleet.trailerSize || '40FT'} Chassis registered under {detectedFleet.operator}. ITT gateway ready.
+                  </Text>
                 </View>
               </View>
+            ) : vehicleNumber.trim().length > 0 ? (
+              <View style={styles.chePendingCard}>
+                <Ionicons name="information-circle-outline" size={15} color="#feb300" />
+                <Text style={styles.chePendingText}>
+                  Type or tap a fleet vehicle below (e.g. LY-5234) to auto-display CHE (SCK No) and 40FT trailer specs.
+                </Text>
+              </View>
+            ) : null}
 
-              <View style={styles.terminalGrid}>
-                {PORT_TERMINALS.map((t) => {
-                  const isSel = assignedTerminal === t.code;
+            {/* Quick Fleet Vehicle Selection Chips */}
+            <View style={{ marginTop: 10 }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                <Text style={styles.fleetPickerLabel}>TAP TO CHOOSE SCK FLEET TRUCK (24 REGISTERED):</Text>
+                <Text style={styles.fleetTotalBadge}>40FT STANDARD</Text>
+              </View>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.fleetChipsScroll}
+              >
+                {SCK_FLEET_VEHICLES.map((v) => {
+                  const isSelected =
+                    detectedFleet?.vehicleNumber.replace(/[^A-Za-z0-9]/g, '') ===
+                    v.vehicleNumber.replace(/[^A-Za-z0-9]/g, '');
                   return (
                     <TouchableOpacity
-                      key={t.code}
-                      style={[
-                        styles.terminalCard,
-                        isSel && { borderColor: t.color, backgroundColor: `${t.color}20` },
-                      ]}
-                      onPress={() => setAssignedTerminal(t.code)}
-                      activeOpacity={0.8}
+                      key={v.vehicleNumber}
+                      style={[styles.fleetChip, isSelected && styles.fleetChipActive]}
+                      onPress={() => setVehicleNumber(v.vehicleNumber)}
+                      activeOpacity={0.7}
                     >
-                      <View style={[styles.terminalDot, { backgroundColor: t.color }]} />
-                      <Text style={[styles.terminalCardCode, isSel && { color: t.color }]}>
-                        {t.code}
+                      <Ionicons name="bus" size={12} color={isSelected ? '#00e5ff' : '#849396'} />
+                      <Text style={[styles.fleetChipText, isSelected && styles.fleetChipTextActive]}>
+                        {v.vehicleNumber}
                       </Text>
+                      <View style={[styles.fleetChipCheBadge, isSelected && styles.fleetChipCheBadgeActive]}>
+                        <Text style={[styles.fleetChipCheBadgeText, isSelected && styles.fleetChipCheBadgeTextActive]}>
+                          {v.cheNumber}
+                        </Text>
+                      </View>
+                      <View style={[styles.fleetChipSizeBadge, isSelected && styles.fleetChipSizeBadgeActive]}>
+                        <Text style={[styles.fleetChipSizeBadgeText, isSelected && styles.fleetChipSizeBadgeTextActive]}>
+                          {v.trailerSize}
+                        </Text>
+                      </View>
                     </TouchableOpacity>
                   );
                 })}
-              </View>
-
-              {/* Selected Terminal Specs */}
-              {(() => {
-                const termInfo = PORT_TERMINALS.find((t) => t.code === assignedTerminal) || PORT_TERMINALS[0];
-                return (
-                  <View style={[styles.terminalDetailBanner, { borderColor: termInfo.color }]}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                      <Ionicons name="boat" size={16} color={termInfo.color} />
-                      <Text style={[styles.terminalDetailName, { color: termInfo.color }]}>
-                        {termInfo.code} — {termInfo.name}
-                      </Text>
-                    </View>
-                    <Text style={styles.terminalDetailDesc}>
-                      Operational Authorization: Inter-Terminal Transport (ITT) Gate Clearance, Container Corridor Telematics & CHE Fleet Supervision.
-                    </Text>
-                  </View>
-                );
-              })()}
-            </View>
-
-            <View style={styles.fieldGroup}>
-              <Text style={styles.fieldLabel}>SUPERVISOR EMPLOYEE ID *</Text>
-              <View style={styles.inputWrap}>
-                <Ionicons name="business" size={16} color="#849396" style={styles.inputIcon} />
-                <TextInput
-                  style={styles.input}
-                  placeholder="e.g. SUP-001 or SUP-9901"
-                  placeholderTextColor="#849396"
-                  value={employeeId}
-                  onChangeText={setEmployeeId}
-                  autoCapitalize="characters"
-                />
-              </View>
-            </View>
-
-            <View style={styles.fieldGroup}>
-              <Text style={styles.fieldLabel}>OFFICIAL MOBILE PHONE NUMBER *</Text>
-              <View style={styles.inputWrap}>
-                <Ionicons name="call" size={16} color="#849396" style={styles.inputIcon} />
-                <TextInput
-                  style={styles.input}
-                  placeholder="e.g. 0712345678"
-                  placeholderTextColor="#849396"
-                  keyboardType="phone-pad"
-                  value={mobileNumber}
-                  onChangeText={setMobileNumber}
-                />
-              </View>
-            </View>
-
-            <View style={styles.fieldGroup}>
-              <Text style={styles.fieldLabel}>OFFICIAL PORT EMAIL ADDRESS *</Text>
-              <View style={styles.inputWrap}>
-                <Ionicons name="mail" size={16} color="#849396" style={styles.inputIcon} />
-                <TextInput
-                  style={styles.input}
-                  placeholder="e.g. supervisor@smartitt.lk"
-                  placeholderTextColor="#849396"
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  value={email}
-                  onChangeText={setEmail}
-                />
-              </View>
+              </ScrollView>
             </View>
           </View>
-        ) : (
-          <View style={styles.card}>
-            <View style={styles.cardHeader}>
-              <Ionicons name="car-sport" size={18} color="#feb300" />
-              <Text style={[styles.cardHeaderText, { color: '#feb300' }]}>
-                2. LICENSE & VEHICLE DETAILS
-              </Text>
-            </View>
 
-            <View style={styles.fieldGroup}>
-              <Text style={styles.fieldLabel}>PORT EMPLOYEE ID *</Text>
-              <View style={styles.inputWrap}>
-                <Ionicons name="business" size={16} color="#849396" style={styles.inputIcon} />
-                <TextInput
-                  style={styles.input}
-                  placeholder="e.g. EMP-092"
-                  placeholderTextColor="#849396"
-                  value={employeeId}
-                  onChangeText={setEmployeeId}
-                  autoCapitalize="characters"
-                />
-              </View>
-            </View>
-
-            <View style={styles.fieldGroup}>
-              <Text style={styles.fieldLabel}>MOBILE PHONE NUMBER *</Text>
-              <View style={styles.inputWrap}>
-                <Ionicons name="call" size={16} color="#849396" style={styles.inputIcon} />
-                <TextInput
-                  style={styles.input}
-                  placeholder="e.g. 0771234567"
-                  placeholderTextColor="#849396"
-                  keyboardType="phone-pad"
-                  value={mobileNumber}
-                  onChangeText={setMobileNumber}
-                />
-              </View>
-            </View>
-
-            <View style={styles.fieldGroup}>
-              <Text style={styles.fieldLabel}>DRIVING LICENSE NUMBER *</Text>
-              <View style={styles.inputWrap}>
-                <Ionicons name="id-card" size={16} color="#849396" style={styles.inputIcon} />
-                <TextInput
-                  style={styles.input}
-                  placeholder="e.g. B1234567"
-                  placeholderTextColor="#849396"
-                  value={licenseNumber}
-                  onChangeText={setLicenseNumber}
-                  autoCapitalize="characters"
-                />
-              </View>
-            </View>
-
-            <View style={styles.fieldGroup}>
-              <Text style={styles.fieldLabel}>LICENSE EXPIRY DATE (YYYY-MM-DD)</Text>
-              <View style={styles.inputWrap}>
-                <Ionicons name="time" size={16} color="#849396" style={styles.inputIcon} />
-                <TextInput
-                  style={styles.input}
-                  placeholder="2029-10-15"
-                  placeholderTextColor="#849396"
-                  value={licenseExpiryDate}
-                  onChangeText={setLicenseExpiryDate}
-                />
-              </View>
-            </View>
-
-            <View style={styles.fieldGroup}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                <Text style={styles.fieldLabel}>ASSIGNED TRUCK / VEHICLE NUMBER *</Text>
-                {detectedFleet && (
-                  <View style={styles.cheBadgeInline}>
-                    <Ionicons name="checkmark-circle" size={11} color="#00ff88" />
-                    <Text style={styles.cheBadgeInlineText}>CHE {detectedFleet.cheNumber} DETECTED</Text>
-                  </View>
-                )}
-              </View>
-
-              <View style={[styles.inputWrap, detectedFleet && styles.inputWrapDetected]}>
-                <Ionicons name="bus" size={16} color={detectedFleet ? '#00e5ff' : '#feb300'} style={styles.inputIcon} />
-                <TextInput
-                  style={styles.input}
-                  placeholder="e.g. LY 5234, LY 6528, LY 5596..."
-                  placeholderTextColor="#849396"
-                  value={vehicleNumber}
-                  onChangeText={setVehicleNumber}
-                  autoCapitalize="characters"
-                />
-                {vehicleNumber.length > 0 && (
-                  <TouchableOpacity onPress={() => setVehicleNumber('')} style={{ paddingHorizontal: 6 }}>
-                    <Ionicons name="close-circle" size={16} color="#849396" />
-                  </TouchableOpacity>
-                )}
-              </View>
-
-              {/* AUTOMATICALLY DISPLAYED CHE NO (SCK NO) & OPERATOR CARD */}
-              {detectedFleet ? (
-                <View style={styles.cheAutoCard}>
-                  <View style={styles.cheAutoHeader}>
-                    <View style={styles.cheLivePill}>
-                      <Ionicons name="hardware-chip" size={13} color="#00ff88" />
-                      <Text style={styles.cheLivePillText}>PORT TELEMATICS DETECTED</Text>
-                    </View>
-                    <Text style={styles.cheVerifiedText}>✓ FLEET VERIFIED</Text>
-                  </View>
-
-                  <View style={styles.cheInfoRow}>
-                    <View style={styles.cheBlock}>
-                      <Text style={styles.cheBlockLabel}>CHE NO (SCK NO)</Text>
-                      <Text style={styles.cheBlockValue}>{detectedFleet.cheNumber}</Text>
-                    </View>
-
-                    <View style={styles.cheDivider} />
-
-                    <View style={styles.cheBlockSmall}>
-                      <Text style={styles.cheBlockLabel}>TRAILER SIZE</Text>
-                      <View style={styles.cheSizePill}>
-                        <Ionicons name="cube" size={11} color="#feb300" />
-                        <Text style={styles.cheBlockSize}>{detectedFleet.trailerSize || '40FT'}</Text>
-                      </View>
-                    </View>
-
-                    <View style={styles.cheDivider} />
-
-                    <View style={styles.cheBlock}>
-                      <Text style={styles.cheBlockLabel}>FLEET OPERATOR</Text>
-                      <Text style={styles.cheBlockOperator}>{detectedFleet.operator}</Text>
-                    </View>
-                  </View>
-
-                  <View style={styles.cheFooterNotice}>
-                    <Ionicons name="shield-checkmark" size={13} color="#00e5ff" />
-                    <Text style={styles.cheFooterNoticeText}>
-                      CHE {detectedFleet.cheNumber} • {detectedFleet.trailerSize || '40FT'} Chassis registered under {detectedFleet.operator}. ITT gateway ready.
-                    </Text>
-                  </View>
-                </View>
-              ) : vehicleNumber.trim().length > 0 ? (
-                <View style={styles.chePendingCard}>
-                  <Ionicons name="information-circle-outline" size={15} color="#feb300" />
-                  <Text style={styles.chePendingText}>
-                    Type or tap a fleet vehicle below (e.g. LY-5234) to auto-display CHE (SCK No) and 40FT trailer specs.
-                  </Text>
-                </View>
-              ) : null}
-
-              {/* Quick Fleet Vehicle Selection Chips */}
-              <View style={{ marginTop: 10 }}>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
-                  <Text style={styles.fleetPickerLabel}>TAP TO CHOOSE SCK FLEET TRUCK (24 REGISTERED):</Text>
-                  <Text style={styles.fleetTotalBadge}>40FT STANDARD</Text>
-                </View>
-                <ScrollView
-                  horizontal
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={styles.fleetChipsScroll}
-                >
-                  {SCK_FLEET_VEHICLES.map((v) => {
-                    const isSelected =
-                      detectedFleet?.vehicleNumber.replace(/[^A-Za-z0-9]/g, '') ===
-                      v.vehicleNumber.replace(/[^A-Za-z0-9]/g, '');
-                    return (
-                      <TouchableOpacity
-                        key={v.vehicleNumber}
-                        style={[styles.fleetChip, isSelected && styles.fleetChipActive]}
-                        onPress={() => setVehicleNumber(v.vehicleNumber)}
-                        activeOpacity={0.7}
-                      >
-                        <Ionicons name="bus" size={12} color={isSelected ? '#00e5ff' : '#849396'} />
-                        <Text style={[styles.fleetChipText, isSelected && styles.fleetChipTextActive]}>
-                          {v.vehicleNumber}
-                        </Text>
-                        <View style={[styles.fleetChipCheBadge, isSelected && styles.fleetChipCheBadgeActive]}>
-                          <Text style={[styles.fleetChipCheBadgeText, isSelected && styles.fleetChipCheBadgeTextActive]}>
-                            {v.cheNumber}
-                          </Text>
-                        </View>
-                        <View style={[styles.fleetChipSizeBadge, isSelected && styles.fleetChipSizeBadgeActive]}>
-                          <Text style={[styles.fleetChipSizeBadgeText, isSelected && styles.fleetChipSizeBadgeTextActive]}>
-                            {v.trailerSize}
-                          </Text>
-                        </View>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </ScrollView>
-              </View>
-            </View>
-
-            <View style={styles.fieldGroup}>
-              <Text style={styles.fieldLabel}>PORT EMAIL ADDRESS (OPTIONAL)</Text>
-              <View style={styles.inputWrap}>
-                <Ionicons name="mail" size={16} color="#849396" style={styles.inputIcon} />
-                <TextInput
-                  style={styles.input}
-                  placeholder="driver@smartitt.lk"
-                  placeholderTextColor="#849396"
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                  value={email}
-                  onChangeText={setEmail}
-                />
-              </View>
+          <View style={styles.fieldGroup}>
+            <Text style={styles.fieldLabel}>PORT EMAIL ADDRESS (OPTIONAL)</Text>
+            <View style={styles.inputWrap}>
+              <Ionicons name="mail" size={16} color="#849396" style={styles.inputIcon} />
+              <TextInput
+                style={styles.input}
+                placeholder="driver@smartitt.lk"
+                placeholderTextColor="#849396"
+                keyboardType="email-address"
+                autoCapitalize="none"
+                value={email}
+                onChangeText={setEmail}
+              />
             </View>
           </View>
-        )}
+        </View>
 
         {/* ─── SECTION 3: Emergency Contacts ─── */}
         <View style={styles.card}>
@@ -1022,11 +702,7 @@ export default function DriverRegisterScreen() {
 
         {/* Submit Button */}
         <TouchableOpacity
-          style={[
-            styles.submitBtn,
-            regRole === 'SUPERVISOR' && { backgroundColor: '#feb300' },
-            loading && { opacity: 0.6 },
-          ]}
+          style={[styles.submitBtn, loading && { opacity: 0.6 }]}
           onPress={handleRegister}
           disabled={loading}
           activeOpacity={0.88}
@@ -1035,29 +711,15 @@ export default function DriverRegisterScreen() {
             <ActivityIndicator color="#00363d" />
           ) : (
             <>
-              <Ionicons
-                name={regRole === 'SUPERVISOR' ? 'briefcase' : 'car-sport'}
-                size={20}
-                color={regRole === 'SUPERVISOR' ? '#432c00' : '#00363d'}
-              />
-              <Text
-                style={[
-                  styles.submitBtnText,
-                  regRole === 'SUPERVISOR' && { color: '#432c00' },
-                ]}
-              >
-                {regRole === 'SUPERVISOR'
-                  ? 'SUBMIT REGISTRATION & ACTIVATE SUPERVISOR PASS'
-                  : 'SUBMIT REGISTRATION & GENERATE OPERATOR ID'}
-              </Text>
+              <Ionicons name="shield-checkmark" size={20} color="#00363d" />
+              <Text style={styles.submitBtnText}>SUBMIT REGISTRATION & GENERATE OPERATOR ID</Text>
             </>
           )}
         </TouchableOpacity>
 
         <TouchableOpacity style={styles.backLink} onPress={() => router.push('/(auth)/login')}>
           <Text style={styles.backLinkText}>
-            Already have an {regRole === 'SUPERVISOR' ? 'Authorized Supervisor Profile' : 'Operator Identification Code'}?{' '}
-            <Text style={styles.backLinkBold}>Sign In</Text>
+            Already have an Operator Identification Code? <Text style={styles.backLinkBold}>Sign In</Text>
           </Text>
         </TouchableOpacity>
 
@@ -1070,350 +732,183 @@ export default function DriverRegisterScreen() {
       <Modal visible={successModalVisible} transparent animationType="slide">
         <View style={styles.modalOverlay}>
           <ScrollView contentContainerStyle={styles.modalScroll}>
-            {(() => {
-              const isSupervisorPass = registeredUser?.role === 'SUPERVISOR' || regRole === 'SUPERVISOR';
-              const termCode = registeredUser?.terminalCode || assignedTerminal || 'CICT';
-              const termObj = PORT_TERMINALS.find((t) => t.code === termCode) || PORT_TERMINALS[0];
+            <View style={styles.idCardContainer}>
+              {/* Top Security Stripe */}
+              <View style={styles.cardStripe}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Ionicons name="boat" size={16} color="#00363d" />
+                  <Text style={styles.stripeTitle}>SRI LANKA PORTS AUTHORITY</Text>
+                </View>
+                <Text style={styles.stripePass}>OFFICIAL OPERATOR PASS</Text>
+              </View>
 
-              return (
-                <View style={styles.idCardContainer}>
-                  {/* Top Security Stripe */}
-                  <View
-                    style={[
-                      styles.cardStripe,
-                      isSupervisorPass && { backgroundColor: '#feb300' },
-                    ]}
-                  >
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                      <Ionicons
-                        name="boat"
-                        size={16}
-                        color={isSupervisorPass ? '#432c00' : '#00363d'}
-                      />
-                      <Text
-                        style={[
-                          styles.stripeTitle,
-                          isSupervisorPass && { color: '#432c00' },
-                        ]}
-                      >
-                        SRI LANKA PORTS AUTHORITY
-                      </Text>
-                    </View>
-                    <Text
-                      style={[
-                        styles.stripePass,
-                        isSupervisorPass && { color: '#432c00' },
-                      ]}
-                    >
-                      {isSupervisorPass ? 'OFFICIAL SUPERVISOR PASS' : 'OFFICIAL OPERATOR PASS'}
-                    </Text>
-                  </View>
-
-                  {/* Main ID Badge Header */}
-                  <View style={styles.cardHeaderBox}>
-                    <View
-                      style={[
-                        styles.operatorAvatarWrap,
-                        isSupervisorPass && { borderColor: '#feb300' },
-                      ]}
-                    >
-                      <Ionicons
-                        name={isSupervisorPass ? 'shield-checkmark' : 'person'}
-                        size={34}
-                        color={isSupervisorPass ? '#feb300' : '#00e5ff'}
-                      />
-                      <View style={styles.verifiedBadge}>
-                        <Ionicons name="checkmark" size={12} color="#003918" />
-                      </View>
-                    </View>
-
-                    <View style={{ flex: 1 }}>
-                      <Text
-                        style={[
-                          styles.operatorTitle,
-                          isSupervisorPass && { color: '#feb300' },
-                        ]}
-                      >
-                        {isSupervisorPass ? 'PORT OPERATIONS SUPERVISOR' : 'PORT TRANSPORT OPERATOR'}
-                      </Text>
-                      <Text style={styles.operatorName}>{registeredUser?.fullName || fullName}</Text>
-                      <View style={styles.statusVerifiedPill}>
-                        <View style={styles.greenPulseDot} />
-                        <Text style={styles.statusVerifiedText}>
-                          {isSupervisorPass ? 'ACTIVE · AUTHORIZED SUPERVISOR' : 'ACTIVE · VERIFIED ACCESS'}
-                        </Text>
-                      </View>
-                    </View>
-                  </View>
-
-                  {/* ── BIG GLOWING IDENTIFICATION NUMBER / CODE ── */}
-                  <View
-                    style={[
-                      styles.operatorIdHighlightBox,
-                      isSupervisorPass && { borderColor: '#feb300', backgroundColor: 'rgba(254, 179, 0, 0.08)' },
-                    ]}
-                  >
-                    <Text
-                      style={[
-                        styles.idHighlightSuper,
-                        isSupervisorPass && { color: '#feb300' },
-                      ]}
-                    >
-                      {isSupervisorPass
-                        ? 'YOUR REGISTERED SUPERVISOR ACCESS ID'
-                        : 'YOUR GENERATED OPERATOR IDENTIFICATION NUMBER'}
-                    </Text>
-                    <View style={styles.idCodeRow}>
-                      <Text
-                        style={[
-                          styles.idCodeText,
-                          isSupervisorPass && { color: '#feb300' },
-                        ]}
-                      >
-                        {generatedDriverCode}
-                      </Text>
-                      <TouchableOpacity
-                        style={[
-                          styles.copyIdBtn,
-                          isSupervisorPass && { borderColor: '#feb300', backgroundColor: 'rgba(254, 179, 0, 0.15)' },
-                        ]}
-                        onPress={handleCopyCode}
-                        activeOpacity={0.8}
-                      >
-                        <Ionicons
-                          name={copied ? 'checkmark' : 'copy'}
-                          size={16}
-                          color={copied ? '#22ef7e' : isSupervisorPass ? '#feb300' : '#00e5ff'}
-                        />
-                        <Text
-                          style={[
-                            styles.copyIdBtnText,
-                            isSupervisorPass && { color: '#feb300' },
-                            copied && { color: '#22ef7e' },
-                          ]}
-                        >
-                          {copied ? 'COPIED' : 'COPY ID'}
-                        </Text>
-                      </TouchableOpacity>
-                    </View>
-                    <Text style={styles.idHighlightSub}>
-                      {isSupervisorPass
-                        ? '⚡ Official SLPA Port Supervisor credentials registered. Use this ID or your Email with your password to log in to the Supervisor Mobile Cockpit and Web Admin Portal.'
-                        : '⚡ System has registered and recognized this Operator ID. Use it as your login username.'}
-                    </Text>
-                  </View>
-
-                  {/* Personal Details Table */}
-                  <View style={styles.detailsSection}>
-                    <View style={styles.sectionTitleRow}>
-                      <Ionicons
-                        name="id-card"
-                        size={14}
-                        color={isSupervisorPass ? '#feb300' : '#00e5ff'}
-                      />
-                      <Text
-                        style={[
-                          styles.detailsSectionTitle,
-                          isSupervisorPass && { color: '#feb300' },
-                        ]}
-                      >
-                        {isSupervisorPass
-                          ? 'SUPERVISOR CREDENTIALS & SPECIFICATIONS'
-                          : 'PERSONAL & LICENSE SPECIFICATIONS'}
-                      </Text>
-                    </View>
-
-                    <View style={styles.detailsGrid}>
-                      <View style={styles.detailItem}>
-                        <Text style={styles.detailItemLabel}>FULL NAME</Text>
-                        <Text style={styles.detailItemValue}>{registeredUser?.fullName || fullName}</Text>
-                      </View>
-                      <View style={styles.detailItem}>
-                        <Text style={styles.detailItemLabel}>NIC NUMBER</Text>
-                        <Text style={styles.detailItemValueMono}>{registeredUser?.nic || nic}</Text>
-                      </View>
-                      <View style={styles.detailItem}>
-                        <Text style={styles.detailItemLabel}>EMPLOYEE ID</Text>
-                        <Text style={styles.detailItemValueMono}>{registeredUser?.employeeId || employeeId}</Text>
-                      </View>
-                      <View style={styles.detailItem}>
-                        <Text style={styles.detailItemLabel}>MOBILE NUMBER</Text>
-                        <Text style={styles.detailItemValueMono}>{registeredUser?.mobileNumber || mobileNumber}</Text>
-                      </View>
-                      {isSupervisorPass ? (
-                        <>
-                          <View style={styles.detailItem}>
-                            <Text style={styles.detailItemLabel}>ASSIGNED TERMINAL</Text>
-                            <Text style={[styles.detailItemValueMono, { color: termObj.color, fontWeight: '900' }]}>
-                              {termObj.code}
-                            </Text>
-                          </View>
-                          <View style={styles.detailItem}>
-                            <Text style={styles.detailItemLabel}>OFFICIAL EMAIL</Text>
-                            <Text style={styles.detailItemValueMono}>{registeredUser?.email || email}</Text>
-                          </View>
-                        </>
-                      ) : (
-                        <>
-                          <View style={styles.detailItem}>
-                            <Text style={styles.detailItemLabel}>DRIVING LICENSE</Text>
-                            <Text style={styles.detailItemValueMono}>{registeredUser?.licenseNumber || licenseNumber}</Text>
-                          </View>
-                          <View style={styles.detailItem}>
-                            <Text style={styles.detailItemLabel}>LICENSE EXPIRY</Text>
-                            <Text style={styles.detailItemValueMono}>{registeredUser?.licenseExpiryDate || licenseExpiryDate || '2030-12-31'}</Text>
-                          </View>
-                        </>
-                      )}
-                      <View style={[styles.detailItem, { width: '100%' }]}>
-                        <Text style={styles.detailItemLabel}>RESIDENTIAL ADDRESS</Text>
-                        <Text style={styles.detailItemValue}>{registeredUser?.address || address}</Text>
-                      </View>
-                    </View>
-                  </View>
-
-                  {/* Operational Station & Clearance Details */}
-                  {isSupervisorPass ? (
-                    <View style={styles.vehicleSection}>
-                      <View style={styles.sectionTitleRow}>
-                        <Ionicons name="boat" size={14} color="#feb300" />
-                        <Text style={[styles.detailsSectionTitle, { color: '#feb300' }]}>
-                          PORT TERMINAL APPOINTMENT &amp; AUTHORITY CLEARANCE
-                        </Text>
-                      </View>
-
-                      <View style={styles.vehicleBox}>
-                        <View style={styles.vehicleRow}>
-                          <Text style={styles.vehicleProp}>DESIGNATED TERMINAL:</Text>
-                          <Text style={[styles.vehicleVal, { color: termObj.color, fontWeight: '900' }]}>
-                            {termObj.code} — {termObj.name}
-                          </Text>
-                        </View>
-                        <View style={styles.vehicleRow}>
-                          <Text style={styles.vehicleProp}>DISPATCH CLEARANCE:</Text>
-                          <Text style={[styles.vehicleVal, { color: '#00ff88', fontWeight: '800' }]}>
-                            Authorized Full ITT Gate Pass & Telematics Supervision
-                          </Text>
-                        </View>
-                        <View style={styles.vehicleRow}>
-                          <Text style={styles.vehicleProp}>ALL-TERMINAL MESH:</Text>
-                          <Text style={styles.vehicleValGreen}>6 SLPA TERMINALS (CICT, SAGT, JCT, ECT, CWIT, UCT)</Text>
-                        </View>
-                        <View style={styles.vehicleRow}>
-                          <Text style={styles.vehicleProp}>EMERGENCY CONTACT:</Text>
-                          <Text style={styles.vehicleVal}>
-                            {registeredUser?.emergencyContactName || emergencyContactName} ({registeredUser?.emergencyContactNumber || emergencyContactNumber})
-                          </Text>
-                        </View>
-                      </View>
-                    </View>
-                  ) : (
-                    <View style={styles.vehicleSection}>
-                      <View style={styles.sectionTitleRow}>
-                        <Ionicons name="bus" size={14} color="#feb300" />
-                        <Text style={[styles.detailsSectionTitle, { color: '#feb300' }]}>
-                          ASSIGNED VEHICLE &amp; TERMINAL DISPATCH
-                        </Text>
-                      </View>
-
-                      <View style={styles.vehicleBox}>
-                        <View style={styles.vehicleRow}>
-                          <Text style={styles.vehicleProp}>ASSIGNED VEHICLE NUMBER:</Text>
-                          <Text style={styles.vehicleVal}>{registeredUser?.vehicleNumber || vehicleNumber || 'LY 5234'}</Text>
-                        </View>
-                        <View style={styles.vehicleRow}>
-                          <Text style={styles.vehicleProp}>CHE NUMBER (SCK NO):</Text>
-                          <Text style={[styles.vehicleVal, { color: '#00e5ff', fontWeight: '900' }]}>
-                            {registeredUser?.cheNumber || detectedFleet?.cheNumber || 'SCK 100'}
-                          </Text>
-                        </View>
-                        <View style={styles.vehicleRow}>
-                          <Text style={styles.vehicleProp}>TRAILER / CHASSIS SIZE:</Text>
-                          <Text style={[styles.vehicleVal, { color: '#feb300', fontWeight: '900' }]}>
-                            {registeredUser?.trailerSize || detectedFleet?.trailerSize || '40FT'}
-                          </Text>
-                        </View>
-                        <View style={styles.vehicleRow}>
-                          <Text style={styles.vehicleProp}>FLEET OPERATOR:</Text>
-                          <Text style={[styles.vehicleVal, { color: '#00ff88', fontWeight: '800' }]}>
-                            {registeredUser?.operator || detectedFleet?.operator || 'SCK Logistics'}
-                          </Text>
-                        </View>
-                        <View style={styles.vehicleRow}>
-                          <Text style={styles.vehicleProp}>TERMINAL CLEARANCE:</Text>
-                          <Text style={styles.vehicleValGreen}>6 SLPA TERMINALS (CICT, CWIT, ECT, JCT, UCT, SAGT)</Text>
-                        </View>
-                        <View style={styles.vehicleRow}>
-                          <Text style={styles.vehicleProp}>EMERGENCY CONTACT:</Text>
-                          <Text style={styles.vehicleVal}>
-                            {registeredUser?.emergencyContactName || emergencyContactName} ({registeredUser?.emergencyContactNumber || emergencyContactNumber})
-                          </Text>
-                        </View>
-                      </View>
-                    </View>
-                  )}
-
-                  {/* Login Credentials Box */}
-                  <View style={styles.loginCredsBox}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                      <Ionicons name="key" size={16} color="#22ef7e" />
-                      <Text style={styles.loginCredsTitle}>
-                        {isSupervisorPass ? 'HOW TO LOG IN (MOBILE & WEB)' : 'HOW TO LOG IN TO SCK LOGISTICS'}
-                      </Text>
-                    </View>
-                    <View style={styles.credRow}>
-                      <Text style={styles.credKey}>LOGIN IDENTIFIER:</Text>
-                      <Text style={[styles.credValCyan, isSupervisorPass && { color: '#feb300' }]}>
-                        {generatedDriverCode}
-                      </Text>
-                    </View>
-                    <View style={styles.credRow}>
-                      <Text style={styles.credKey}>PIN / PASSWORD:</Text>
-                      <Text style={styles.credValWhite}>[ Your registered secure password ]</Text>
-                    </View>
-                  </View>
-
-                  {/* Action Buttons */}
-                  <View style={styles.modalActionButtons}>
-                    <TouchableOpacity
-                      style={[
-                        styles.directCockpitBtn,
-                        isSupervisorPass && { backgroundColor: '#feb300' },
-                      ]}
-                      onPress={handleDirectCockpitAccess}
-                      activeOpacity={0.88}
-                    >
-                      <Ionicons
-                        name={isSupervisorPass ? 'shield-checkmark' : 'navigate'}
-                        size={20}
-                        color={isSupervisorPass ? '#432c00' : '#00363d'}
-                      />
-                      <Text
-                        style={[
-                          styles.directCockpitBtnText,
-                          isSupervisorPass && { color: '#432c00' },
-                        ]}
-                      >
-                        {isSupervisorPass
-                          ? 'ENTER SUPERVISOR COCKPIT DIRECTLY'
-                          : 'ENTER DRIVER COCKPIT DIRECTLY'}
-                      </Text>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                      style={styles.proceedLoginBtn}
-                      onPress={handleProceedToLogin}
-                      activeOpacity={0.88}
-                    >
-                      <Ionicons name="log-in" size={18} color="#00e5ff" />
-                      <Text style={styles.proceedLoginBtnText}>
-                        GO TO LOGIN WITH {generatedDriverCode}
-                      </Text>
-                    </TouchableOpacity>
+              {/* Main ID Badge Header */}
+              <View style={styles.cardHeaderBox}>
+                <View style={styles.operatorAvatarWrap}>
+                  <Ionicons name="person" size={36} color="#00e5ff" />
+                  <View style={styles.verifiedBadge}>
+                    <Ionicons name="checkmark" size={12} color="#003918" />
                   </View>
                 </View>
-              );
-            })()}
+
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.operatorTitle}>PORT TRANSPORT OPERATOR</Text>
+                  <Text style={styles.operatorName}>{registeredUser?.fullName || fullName}</Text>
+                  <View style={styles.statusVerifiedPill}>
+                    <View style={styles.greenPulseDot} />
+                    <Text style={styles.statusVerifiedText}>ACTIVE · VERIFIED ACCESS</Text>
+                  </View>
+                </View>
+              </View>
+
+              {/* ── BIG GLOWING OPERATOR IDENTIFICATION NUMBER (DRV-XXXXX) ── */}
+              <View style={styles.operatorIdHighlightBox}>
+                <Text style={styles.idHighlightSuper}>YOUR GENERATED OPERATOR IDENTIFICATION NUMBER</Text>
+                <View style={styles.idCodeRow}>
+                  <Text style={styles.idCodeText}>{generatedDriverCode}</Text>
+                  <TouchableOpacity
+                    style={styles.copyIdBtn}
+                    onPress={handleCopyCode}
+                    activeOpacity={0.8}
+                  >
+                    <Ionicons
+                      name={copied ? 'checkmark' : 'copy'}
+                      size={16}
+                      color={copied ? '#22ef7e' : '#00e5ff'}
+                    />
+                    <Text style={[styles.copyIdBtnText, copied && { color: '#22ef7e' }]}>
+                      {copied ? 'COPIED' : 'COPY ID'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+                <Text style={styles.idHighlightSub}>
+                  ⚡ System has registered and recognized this Operator ID. Use it as your login username.
+                </Text>
+              </View>
+
+              {/* Personal Details Table */}
+              <View style={styles.detailsSection}>
+                <View style={styles.sectionTitleRow}>
+                  <Ionicons name="id-card" size={14} color="#00e5ff" />
+                  <Text style={styles.detailsSectionTitle}>PERSONAL &amp; LICENSE SPECIFICATIONS</Text>
+                </View>
+
+                <View style={styles.detailsGrid}>
+                  <View style={styles.detailItem}>
+                    <Text style={styles.detailItemLabel}>FULL NAME</Text>
+                    <Text style={styles.detailItemValue}>{registeredUser?.fullName || fullName}</Text>
+                  </View>
+                  <View style={styles.detailItem}>
+                    <Text style={styles.detailItemLabel}>NIC NUMBER</Text>
+                    <Text style={styles.detailItemValueMono}>{registeredUser?.nic || nic}</Text>
+                  </View>
+                  <View style={styles.detailItem}>
+                    <Text style={styles.detailItemLabel}>EMPLOYEE ID</Text>
+                    <Text style={styles.detailItemValueMono}>{registeredUser?.employeeId || employeeId}</Text>
+                  </View>
+                  <View style={styles.detailItem}>
+                    <Text style={styles.detailItemLabel}>MOBILE NUMBER</Text>
+                    <Text style={styles.detailItemValueMono}>{registeredUser?.mobileNumber || mobileNumber}</Text>
+                  </View>
+                  <View style={styles.detailItem}>
+                    <Text style={styles.detailItemLabel}>DRIVING LICENSE</Text>
+                    <Text style={styles.detailItemValueMono}>{registeredUser?.licenseNumber || licenseNumber}</Text>
+                  </View>
+                  <View style={styles.detailItem}>
+                    <Text style={styles.detailItemLabel}>LICENSE EXPIRY</Text>
+                    <Text style={styles.detailItemValueMono}>{registeredUser?.licenseExpiryDate || licenseExpiryDate || '2030-12-31'}</Text>
+                  </View>
+                  <View style={[styles.detailItem, { width: '100%' }]}>
+                    <Text style={styles.detailItemLabel}>RESIDENTIAL ADDRESS</Text>
+                    <Text style={styles.detailItemValue}>{registeredUser?.address || address}</Text>
+                  </View>
+                </View>
+              </View>
+
+              {/* Vehicle & Operational Station Details */}
+              <View style={styles.vehicleSection}>
+                <View style={styles.sectionTitleRow}>
+                  <Ionicons name="bus" size={14} color="#feb300" />
+                  <Text style={[styles.detailsSectionTitle, { color: '#feb300' }]}>
+                    ASSIGNED VEHICLE &amp; TERMINAL DISPATCH
+                  </Text>
+                </View>
+
+                <View style={styles.vehicleBox}>
+                  <View style={styles.vehicleRow}>
+                    <Text style={styles.vehicleProp}>ASSIGNED VEHICLE NUMBER:</Text>
+                    <Text style={styles.vehicleVal}>{registeredUser?.vehicleNumber || vehicleNumber || 'LY 5234'}</Text>
+                  </View>
+                  <View style={styles.vehicleRow}>
+                    <Text style={styles.vehicleProp}>CHE NUMBER (SCK NO):</Text>
+                    <Text style={[styles.vehicleVal, { color: '#00e5ff', fontWeight: '900' }]}>
+                      {registeredUser?.cheNumber || detectedFleet?.cheNumber || 'SCK 100'}
+                    </Text>
+                  </View>
+                  <View style={styles.vehicleRow}>
+                    <Text style={styles.vehicleProp}>TRAILER / CHASSIS SIZE:</Text>
+                    <Text style={[styles.vehicleVal, { color: '#feb300', fontWeight: '900' }]}>
+                      {registeredUser?.trailerSize || detectedFleet?.trailerSize || '40FT'}
+                    </Text>
+                  </View>
+                  <View style={styles.vehicleRow}>
+                    <Text style={styles.vehicleProp}>FLEET OPERATOR:</Text>
+                    <Text style={[styles.vehicleVal, { color: '#00ff88', fontWeight: '800' }]}>
+                      {registeredUser?.operator || detectedFleet?.operator || 'SCK Logistics'}
+                    </Text>
+                  </View>
+                  <View style={styles.vehicleRow}>
+                    <Text style={styles.vehicleProp}>TERMINAL CLEARANCE:</Text>
+                    <Text style={styles.vehicleValGreen}>6 SLPA TERMINALS (CICT, CWIT, ECT, JCT, UCT, SAGT)</Text>
+                  </View>
+                  <View style={styles.vehicleRow}>
+                    <Text style={styles.vehicleProp}>EMERGENCY CONTACT:</Text>
+                    <Text style={styles.vehicleVal}>
+                      {registeredUser?.emergencyContactName || emergencyContactName} ({registeredUser?.emergencyContactNumber || emergencyContactNumber})
+                    </Text>
+                  </View>
+                </View>
+              </View>
+
+              {/* Login Credentials Box */}
+              <View style={styles.loginCredsBox}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Ionicons name="key" size={16} color="#22ef7e" />
+                  <Text style={styles.loginCredsTitle}>HOW TO LOG IN TO SCK LOGISTICS</Text>
+                </View>
+                <View style={styles.credRow}>
+                  <Text style={styles.credKey}>OPERATOR USERNAME:</Text>
+                  <Text style={styles.credValCyan}>{generatedDriverCode}</Text>
+                </View>
+                <View style={styles.credRow}>
+                  <Text style={styles.credKey}>PIN / PASSWORD:</Text>
+                  <Text style={styles.credValWhite}>[ Your registered secure password ]</Text>
+                </View>
+              </View>
+
+              {/* Action Buttons */}
+              <View style={styles.modalActionButtons}>
+                <TouchableOpacity
+                  style={styles.directCockpitBtn}
+                  onPress={handleDirectCockpitAccess}
+                  activeOpacity={0.88}
+                >
+                  <Ionicons name="navigate" size={20} color="#00363d" />
+                  <Text style={styles.directCockpitBtnText}>ENTER DRIVER COCKPIT DIRECTLY</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.proceedLoginBtn}
+                  onPress={handleProceedToLogin}
+                  activeOpacity={0.88}
+                >
+                  <Ionicons name="log-in" size={18} color="#00e5ff" />
+                  <Text style={styles.proceedLoginBtnText}>
+                    GO TO LOGIN WITH {generatedDriverCode}
+                  </Text>
+                </TouchableOpacity>
+              </View>
+            </View>
           </ScrollView>
         </View>
       </Modal>
@@ -2187,88 +1682,5 @@ const styles = StyleSheet.create({
   },
   fleetChipSizeBadgeTextActive: {
     color: '#080e17',
-  },
-  roleTabsRow: {
-    flexDirection: 'row',
-    gap: 8,
-    marginBottom: 12,
-  },
-  roleTab: {
-    flex: 1,
-    height: 44,
-    borderRadius: radius.DEFAULT,
-    backgroundColor: '#161c25',
-    borderWidth: 1,
-    borderColor: '#242a34',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-  },
-  roleTabActiveCyan: {
-    backgroundColor: '#00e5ff',
-    borderColor: '#00e5ff',
-  },
-  roleTabActiveAmber: {
-    backgroundColor: '#feb300',
-    borderColor: '#feb300',
-  },
-  roleTabText: {
-    fontSize: 10,
-    fontWeight: '900',
-    color: '#849396',
-    letterSpacing: 0.6,
-  },
-  roleTabTextActiveDark: {
-    color: '#00363d',
-  },
-  terminalGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    marginTop: 6,
-  },
-  terminalCard: {
-    flexGrow: 1,
-    minWidth: 80,
-    height: 42,
-    backgroundColor: '#080e17',
-    borderRadius: radius.sm,
-    borderWidth: 1,
-    borderColor: '#242a34',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    paddingHorizontal: 8,
-  },
-  terminalDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  terminalCardCode: {
-    fontSize: 11,
-    fontWeight: '800',
-    color: '#849396',
-    letterSpacing: 0.5,
-  },
-  terminalDetailBanner: {
-    backgroundColor: 'rgba(255, 255, 255, 0.03)',
-    borderWidth: 1,
-    borderRadius: radius.sm,
-    padding: 10,
-    marginTop: 10,
-    gap: 4,
-  },
-  terminalDetailName: {
-    fontSize: 11,
-    fontWeight: '800',
-    letterSpacing: 0.5,
-  },
-  terminalDetailDesc: {
-    fontSize: 10,
-    color: '#849396',
-    lineHeight: 14,
   },
 });
