@@ -79,6 +79,7 @@ const AVATAR_PRESETS = [
 export default function DriverProfileScreen() {
   const user = useAuthStore((s) => s.user);
   const updateUser = useAuthStore((s) => s.updateUser);
+  const setVehicleStatus = useAuthStore((s) => s.setVehicleStatus);
   const logout = useAuthStore((s) => s.logout);
   const router = useRouter();
   const { topInset, bottomInset, contentMaxWidth, containerPaddingHorizontal } = useResponsive();
@@ -87,6 +88,10 @@ export default function DriverProfileScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [vehicleStatus, setLocalVehicleStatus] = useState<'ACTIVE' | 'MAINTENANCE' | 'INACTIVE'>(
+    (user?.vehicleStatus as any) || 'ACTIVE'
+  );
+  const [updatingVehicle, setUpdatingVehicle] = useState(false);
 
   // Photos State
   const [profilePhoto, setProfilePhoto] = useState<string | undefined>(user?.profilePhoto);
@@ -126,6 +131,11 @@ export default function DriverProfileScreen() {
           status: data.status,
           profilePhoto: data.profilePhoto,
           coverImage: data.coverImage,
+          vehicleLicenseIssuedDate: data.vehicleLicenseIssuedDate,
+          vehicleLicenseExpiryDate: data.vehicleLicenseExpiryDate,
+          vehicleLicenseDaysLeft: data.vehicleLicenseDaysLeft,
+          vehicleLicenseRenewalDue: data.vehicleLicenseRenewalDue,
+          vehicleLicenseStatus: data.vehicleLicenseStatus,
         });
       }
     } catch (err) {
@@ -164,6 +174,46 @@ export default function DriverProfileScreen() {
         { text: 'Cancel', style: 'cancel' },
         { text: 'Sign Out', style: 'destructive', onPress: () => { logout(); router.replace('/(auth)/login'); } },
       ]);
+    }
+  };
+
+  const handleToggleMaintenance = async () => {
+    const nextStatus = vehicleStatus === 'MAINTENANCE' ? 'ACTIVE' : 'MAINTENANCE';
+    const actionLabel =
+      nextStatus === 'MAINTENANCE'
+        ? 'Set Vehicle to Maintenance Mode'
+        : 'Return Vehicle to Active Fleet';
+
+    const performUpdate = async () => {
+      setUpdatingVehicle(true);
+      try {
+        await setVehicleStatus(nextStatus);
+        setLocalVehicleStatus(nextStatus);
+        if (Platform.OS === 'web') {
+          window.alert(`Vehicle ${vehicleNumber} status updated to ${nextStatus}`);
+        } else {
+          Alert.alert('Vehicle Updated', `Vehicle ${vehicleNumber} status changed to ${nextStatus}`);
+        }
+      } catch (err: any) {
+        Alert.alert('Error', err?.message || 'Failed to update vehicle status.');
+      } finally {
+        setUpdatingVehicle(false);
+      }
+    };
+
+    if (Platform.OS === 'web') {
+      if (window.confirm(`${actionLabel} for ${vehicleNumber} (${chassisNumber})?`)) {
+        performUpdate();
+      }
+    } else {
+      Alert.alert(
+        actionLabel,
+        `Are you sure you want to mark ${vehicleNumber} (${chassisNumber}) as ${nextStatus}?`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Confirm', onPress: performUpdate },
+        ]
+      );
     }
   };
 
@@ -264,6 +314,14 @@ export default function DriverProfileScreen() {
   const status = profile?.status || user?.status || 'ACTIVE';
   const isActive = status === 'ACTIVE';
   const initials = fullName !== '—' ? fullName.split(' ').map((w: string) => w[0]).join('').slice(0, 2).toUpperCase() : 'DR';
+
+  // Vehicle Revenue License (Valid for 1 Year, Updated by Admin)
+  const vehicleLicenseIssuedDate = profile?.vehicleLicenseIssuedDate || user?.vehicleLicenseIssuedDate || '2025-11-06';
+  const vehicleLicenseExpiryDate = profile?.vehicleLicenseExpiryDate || user?.vehicleLicenseExpiryDate || '2026-11-06';
+  const vehicleLicenseDaysLeft = profile?.vehicleLicenseDaysLeft ?? user?.vehicleLicenseDaysLeft ?? (
+    Math.round((new Date(vehicleLicenseExpiryDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+  );
+  const vehicleLicenseRenewalDue = profile?.vehicleLicenseRenewalDue ?? user?.vehicleLicenseRenewalDue ?? (vehicleLicenseDaysLeft <= 30);
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
@@ -370,6 +428,213 @@ export default function DriverProfileScreen() {
           <ActivityIndicator size="large" color={colors.primaryContainer} style={{ marginTop: 40 }} />
         ) : (
           <View style={styles.content}>
+            {/* ─── Assigned Prime Mover & Fleet Status / Maintenance Control ─── */}
+            <View style={styles.card}>
+              <View style={styles.cardHead}>
+                <Ionicons name="bus-outline" size={18} color="#00e5ff" />
+                <Text style={styles.cardTitle}>ASSIGNED PRIME MOVER & STATUS</Text>
+                <View
+                  style={[
+                    styles.statusBadge,
+                    {
+                      backgroundColor:
+                        vehicleStatus === 'MAINTENANCE'
+                          ? 'rgba(245, 158, 11, 0.15)'
+                          : vehicleStatus === 'ACTIVE'
+                          ? 'rgba(16, 185, 129, 0.15)'
+                          : 'rgba(148, 163, 184, 0.15)',
+                    },
+                  ]}
+                >
+                  <View
+                    style={[
+                      styles.statusDotSmall,
+                      {
+                        backgroundColor:
+                          vehicleStatus === 'MAINTENANCE'
+                            ? '#f59e0b'
+                            : vehicleStatus === 'ACTIVE'
+                            ? '#10b981'
+                            : '#94a3b8',
+                      },
+                    ]}
+                  />
+                  <Text
+                    style={[
+                      styles.statusText,
+                      {
+                        color:
+                          vehicleStatus === 'MAINTENANCE'
+                            ? '#f59e0b'
+                            : vehicleStatus === 'ACTIVE'
+                            ? '#10b981'
+                            : '#94a3b8',
+                        fontWeight: '800',
+                      },
+                    ]}
+                  >
+                    {vehicleStatus}
+                  </Text>
+                </View>
+              </View>
+
+              <View style={styles.vehicleCardBody}>
+                <View style={styles.vehicleMetaRow}>
+                  <View>
+                    <Text style={styles.vehicleMetaLabel}>TRACTOR LICENSE & CHE</Text>
+                    <Text style={styles.vehicleMetaPlate}>
+                      {vehicleNumber}{' '}
+                      <Text style={{ color: '#00e5ff', fontSize: 13, fontWeight: '700' }}>
+                        • {chassisNumber}
+                      </Text>
+                    </Text>
+                  </View>
+                  <View style={{ alignItems: 'flex-end' }}>
+                    <Text style={styles.vehicleMetaLabel}>FLEET OPERATOR</Text>
+                    <Text style={styles.vehicleMetaOperator}>{operatorName}</Text>
+                  </View>
+                </View>
+
+                {/* ─── Vehicle Revenue License (Valid 1 Year, Updated by Admin) ─── */}
+                <View style={styles.licenseCard}>
+                  <View style={styles.licenseCardHeader}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                      <Ionicons name="document-text" size={15} color="#00e5ff" />
+                      <Text style={styles.licenseCardTitle}>VEHICLE REVENUE LICENSE</Text>
+                    </View>
+                    <View
+                      style={[
+                        styles.licenseStatusBadge,
+                        vehicleLicenseRenewalDue ? styles.licenseStatusRenewal : styles.licenseStatusValid,
+                      ]}
+                    >
+                      <Ionicons
+                        name={vehicleLicenseRenewalDue ? 'warning' : 'checkmark-circle'}
+                        size={12}
+                        color={vehicleLicenseRenewalDue ? '#f59e0b' : '#10b981'}
+                      />
+                      <Text
+                        style={[
+                          styles.licenseStatusBadgeText,
+                          { color: vehicleLicenseRenewalDue ? '#f59e0b' : '#10b981' },
+                        ]}
+                      >
+                        {vehicleLicenseRenewalDue ? 'RENEWAL DUE' : 'VALID'}
+                      </Text>
+                    </View>
+                  </View>
+
+                  <View style={styles.licenseDatesGrid}>
+                    <View style={styles.licenseDateCol}>
+                      <Text style={styles.licenseDateLabel}>ADMIN ISSUED DATE</Text>
+                      <Text style={styles.licenseDateVal}>{vehicleLicenseIssuedDate}</Text>
+                    </View>
+                    <View style={styles.licenseDateDivider} />
+                    <View style={styles.licenseDateCol}>
+                      <Text style={styles.licenseDateLabel}>EXPIRY DATE (1 YR VALID)</Text>
+                      <Text
+                        style={[
+                          styles.licenseDateVal,
+                          vehicleLicenseRenewalDue && { color: '#f59e0b', fontWeight: '900' },
+                        ]}
+                      >
+                        {vehicleLicenseExpiryDate}
+                      </Text>
+                    </View>
+                  </View>
+
+                  {/* ─── URGENT RENEWAL NOTIFICATION BANNER (DISAPPEARS WHEN RENEWAL IS MORE THAN 1 MONTH AWAY) ─── */}
+                  {vehicleLicenseRenewalDue ? (
+                    <View style={styles.licenseAlertBanner}>
+                      <View style={styles.licenseAlertIconWrap}>
+                        <Ionicons name="alert-circle" size={18} color="#f59e0b" />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.licenseAlertTitle}>
+                          ⚠️ REVENUE LICENSE RENEWAL NOTIFICATION
+                        </Text>
+                        <Text style={styles.licenseAlertBody}>
+                          {vehicleLicenseDaysLeft <= 0
+                            ? `License expired on ${vehicleLicenseExpiryDate}. Admin renewal required immediately.`
+                            : `Renewal due in ${vehicleLicenseDaysLeft} days (${vehicleLicenseExpiryDate}). Dispatched to Driver, Supervisor & Admin.`}
+                        </Text>
+                      </View>
+                    </View>
+                  ) : (
+                    <View style={styles.licenseValidBanner}>
+                      <Ionicons name="shield-checkmark" size={14} color="#10b981" />
+                      <Text style={styles.licenseValidText}>
+                        Revenue License Valid • {vehicleLicenseDaysLeft} days left on 1-year cycle
+                      </Text>
+                    </View>
+                  )}
+                </View>
+
+                {/* Maintenance Action Button */}
+                <TouchableOpacity
+                  style={[
+                    styles.maintenanceBtn,
+                    vehicleStatus === 'MAINTENANCE'
+                      ? styles.maintenanceBtnInMaint
+                      : styles.maintenanceBtnNormal,
+                  ]}
+                  onPress={handleToggleMaintenance}
+                  disabled={updatingVehicle}
+                  activeOpacity={0.85}
+                >
+                  {updatingVehicle ? (
+                    <ActivityIndicator
+                      size="small"
+                      color={vehicleStatus === 'MAINTENANCE' ? '#00e5ff' : '#f59e0b'}
+                    />
+                  ) : (
+                    <>
+                      <View
+                        style={[
+                          styles.maintenanceIconCircle,
+                          {
+                            backgroundColor:
+                              vehicleStatus === 'MAINTENANCE' ? '#00e5ff' : '#f59e0b',
+                          },
+                        ]}
+                      >
+                        <Ionicons
+                          name={vehicleStatus === 'MAINTENANCE' ? 'checkmark-circle' : 'construct'}
+                          size={18}
+                          color="#00363d"
+                        />
+                      </View>
+                      <View style={{ flex: 1, marginLeft: 10 }}>
+                        <Text
+                          style={[
+                            styles.maintenanceBtnTitle,
+                            {
+                              color:
+                                vehicleStatus === 'MAINTENANCE' ? '#00e5ff' : '#f59e0b',
+                            },
+                          ]}
+                        >
+                          {vehicleStatus === 'MAINTENANCE'
+                            ? 'EXIT MAINTENANCE (RESTORE ACTIVE)'
+                            : 'SET VEHICLE TO MAINTENANCE'}
+                        </Text>
+                        <Text style={styles.maintenanceBtnSub}>
+                          {vehicleStatus === 'MAINTENANCE'
+                            ? 'Vehicle repaired • Tap to restore vehicle to ACTIVE fleet'
+                            : 'Workshop repair/service • Tap to mark vehicle in MAINTENANCE'}
+                        </Text>
+                      </View>
+                      <Ionicons
+                        name="chevron-forward"
+                        size={18}
+                        color={vehicleStatus === 'MAINTENANCE' ? '#00e5ff' : '#f59e0b'}
+                      />
+                    </>
+                  )}
+                </TouchableOpacity>
+              </View>
+            </View>
+
             {/* ─── Profile Details Card ─── */}
             <View style={styles.card}>
               <View style={styles.cardHead}>
@@ -810,6 +1075,68 @@ const styles = StyleSheet.create({
     letterSpacing: 0.5,
   },
 
+  // ─── Assigned Vehicle & Maintenance Card Styles ───
+  vehicleCardBody: {
+    padding: 14,
+  },
+  vehicleMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 14,
+  },
+  vehicleMetaLabel: {
+    fontSize: 10,
+    color: '#849396',
+    fontWeight: '800',
+    letterSpacing: 0.6,
+    marginBottom: 3,
+  },
+  vehicleMetaPlate: {
+    fontSize: 16,
+    fontWeight: '900',
+    color: '#dde2f0',
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+  },
+  vehicleMetaOperator: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#94a3b8',
+  },
+  maintenanceBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 12,
+    borderRadius: radius.DEFAULT,
+    borderWidth: 1.5,
+  },
+  maintenanceBtnNormal: {
+    backgroundColor: 'rgba(245, 158, 11, 0.08)',
+    borderColor: 'rgba(245, 158, 11, 0.35)',
+  },
+  maintenanceBtnInMaint: {
+    backgroundColor: 'rgba(0, 229, 255, 0.08)',
+    borderColor: 'rgba(0, 229, 255, 0.4)',
+  },
+  maintenanceIconCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  maintenanceBtnTitle: {
+    fontSize: 12,
+    fontWeight: '900',
+    letterSpacing: 0.6,
+  },
+  maintenanceBtnSub: {
+    fontSize: 10,
+    color: '#849396',
+    marginTop: 2,
+    fontWeight: '500',
+  },
+
   // ─── Modal Styles ───
   modalOverlay: {
     flex: 1,
@@ -952,6 +1279,126 @@ const styles = StyleSheet.create({
   resetBtnText: {
     color: '#849396',
     fontSize: 11,
+    fontWeight: '700',
+  },
+
+  // ─── Vehicle Revenue License Styles ───
+  licenseCard: {
+    backgroundColor: '#0c131d',
+    borderRadius: radius.md,
+    borderWidth: 1,
+    borderColor: 'rgba(0, 229, 255, 0.2)',
+    padding: 12,
+    marginBottom: 14,
+  },
+  licenseCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+    paddingBottom: 6,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255, 255, 255, 0.06)',
+  },
+  licenseCardTitle: {
+    color: '#00e5ff',
+    fontSize: 11,
+    fontWeight: '800',
+    letterSpacing: 0.8,
+  },
+  licenseStatusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: radius.pill,
+  },
+  licenseStatusRenewal: {
+    backgroundColor: 'rgba(245, 158, 11, 0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(245, 158, 11, 0.4)',
+  },
+  licenseStatusValid: {
+    backgroundColor: 'rgba(16, 185, 129, 0.15)',
+    borderWidth: 1,
+    borderColor: 'rgba(16, 185, 129, 0.4)',
+  },
+  licenseStatusBadgeText: {
+    fontSize: 9,
+    fontWeight: '900',
+    letterSpacing: 0.5,
+  },
+  licenseDatesGrid: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    borderRadius: 8,
+    padding: 10,
+    marginBottom: 10,
+  },
+  licenseDateCol: {
+    flex: 1,
+  },
+  licenseDateDivider: {
+    width: 1,
+    height: 28,
+    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+    marginHorizontal: 10,
+  },
+  licenseDateLabel: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: '#849396',
+    letterSpacing: 0.5,
+    marginBottom: 3,
+  },
+  licenseDateVal: {
+    fontSize: 13,
+    fontWeight: '900',
+    color: '#dde2f0',
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+  },
+  licenseAlertBanner: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+    backgroundColor: 'rgba(245, 158, 11, 0.12)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(245, 158, 11, 0.5)',
+    borderRadius: 8,
+    padding: 10,
+  },
+  licenseAlertIconWrap: {
+    marginTop: 1,
+  },
+  licenseAlertTitle: {
+    color: '#f59e0b',
+    fontSize: 10,
+    fontWeight: '900',
+    letterSpacing: 0.6,
+    marginBottom: 2,
+  },
+  licenseAlertBody: {
+    color: '#fbbf24',
+    fontSize: 10,
+    lineHeight: 14,
+    fontWeight: '600',
+  },
+  licenseValidBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: 'rgba(16, 185, 129, 0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(16, 185, 129, 0.25)',
+    borderRadius: 8,
+    paddingVertical: 7,
+    paddingHorizontal: 10,
+  },
+  licenseValidText: {
+    color: '#10b981',
+    fontSize: 10,
     fontWeight: '700',
   },
 });

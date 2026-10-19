@@ -23,6 +23,22 @@ export interface DriverRegisterRequest {
   vehicleNumber?: string;
 }
 
+export interface SupervisorRegisterRequest {
+  fullName: string;
+  nic: string;
+  employeeId: string;
+  mobileNumber: string;
+  email: string;
+  terminalCode: string; // CICT, SAGT, JCT, ECT, CWIT, UCT
+  address?: string;
+  dateOfBirth?: string;
+  emergencyContactName?: string;
+  emergencyContactNumber?: string;
+  password: string;
+  confirmPassword?: string;
+  username?: string;
+}
+
 export interface DriverProfileData {
   id: string;
   driverCode?: string;
@@ -110,6 +126,11 @@ export const authService = {
 
   async registerDriver(request: DriverRegisterRequest): Promise<AuthResponse> {
     const response = await apiClient.post('/auth/register/driver', request);
+    return normalizeAuthResponse(response.data);
+  },
+
+  async registerSupervisor(request: SupervisorRegisterRequest): Promise<AuthResponse> {
+    const response = await apiClient.post('/auth/register/supervisor', request);
     return normalizeAuthResponse(response.data);
   },
 };

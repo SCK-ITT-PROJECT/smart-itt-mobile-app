@@ -341,6 +341,36 @@ export default function SupervisorHomeDashboard() {
           </View>
         </View>
 
+        {/* ─── VEHICLE REVENUE LICENSE RENEWAL ALERT (Disappears when no renewals within 30 days) ─── */}
+        {(() => {
+          const renewalDrivers = drivers.filter(
+            (d: any) => d.vehicleLicenseRenewalDue === true || (d.vehicleLicenseDaysLeft != null && d.vehicleLicenseDaysLeft <= 30)
+          );
+          if (renewalDrivers.length === 0) return null;
+          return (
+            <View style={styles.licenseAlertBanner}>
+              <View style={styles.licenseAlertIconWrap}>
+                <Ionicons name="alert-circle" size={20} color="#f59e0b" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.licenseAlertTitle}>
+                  ⚠️ VEHICLE REVENUE LICENSE RENEWAL ({renewalDrivers.length} VEHICLE{renewalDrivers.length > 1 ? 'S' : ''})
+                </Text>
+                {renewalDrivers.slice(0, 3).map((d: any) => (
+                  <Text key={d.id || d.driverCode} style={styles.licenseAlertBody}>
+                    • {d.vehicleNumber || '—'} ({d.fullName || d.driverCode}) — {d.vehicleLicenseDaysLeft != null ? (d.vehicleLicenseDaysLeft <= 0 ? 'EXPIRED' : `${d.vehicleLicenseDaysLeft} days left`) : 'Renewal Due'}
+                  </Text>
+                ))}
+                {renewalDrivers.length > 3 && (
+                  <Text style={styles.licenseAlertBody}>
+                    + {renewalDrivers.length - 3} more vehicle(s) due for renewal
+                  </Text>
+                )}
+              </View>
+            </View>
+          );
+        })()}
+
         {/* ─── B. SUPERVISOR SUMMARY METRIC CARDS (LIVE BACKEND DATA) ─── */}
         <View style={styles.metricsGrid}>
           <View style={[styles.metricCard, { width: metricCardWidth }]}>
@@ -1803,5 +1833,41 @@ const styles = StyleSheet.create({
     color: '#849396',
     fontSize: 9,
     marginTop: 2,
+  },
+  licenseAlertBanner: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: '#261a06',
+    borderWidth: 1.5,
+    borderColor: '#f59e0b',
+    borderRadius: radius.md,
+    padding: 12,
+    marginBottom: 16,
+    gap: 12,
+    shadowColor: '#f59e0b',
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  licenseAlertIconWrap: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: '#3d2806',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  licenseAlertTitle: {
+    color: '#fbbf24',
+    fontSize: 12,
+    fontWeight: '900',
+    letterSpacing: 0.5,
+    marginBottom: 4,
+  },
+  licenseAlertBody: {
+    color: '#fef3c7',
+    fontSize: 11,
+    lineHeight: 16,
+    fontWeight: '600',
   },
 });

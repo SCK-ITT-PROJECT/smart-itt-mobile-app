@@ -108,6 +108,7 @@ export default function DriverHomeDashboard() {
     ).start();
   }, [scaleAnim, rotateAnim, confettiAnim, pulseAnim]);
 
+  const [driverProfile, setDriverProfile] = useState<any>(null);
   const mockTrips = useMockTripStore((s) => s.mockTrips);
 
   // Fetch live dashboard & trips
@@ -130,16 +131,14 @@ export default function DriverHomeDashboard() {
       setDashboardStats(stats);
       setIsOnline(true);
 
-      // Fetch driver profile photos if not yet loaded in store
-      if (!user?.profilePhoto) {
-        try {
-          const driverIdentifier = user?.driverCode || user?.driverId || user?.username || 'DRV-00001';
-          const prof = await driverService.getProfile(driverIdentifier);
-          if (prof?.profilePhoto) {
-            useAuthStore.getState().updateUser({ profilePhoto: prof.profilePhoto, coverImage: prof.coverImage });
-          }
-        } catch {}
-      }
+      // 3. Fetch driver profile to sync assigned vehicle and 1-year revenue license metrics
+      try {
+        const driverIdentifier = user?.driverCode || user?.driverId || user?.username || 'DRV-00001';
+        const prof = await driverService.getProfile(driverIdentifier);
+        if (prof) {
+          setDriverProfile(prof);
+        }
+      } catch {}
     } catch {
       setTrips(demoTrips);
       setIsOnline(false);
@@ -162,7 +161,7 @@ export default function DriverHomeDashboard() {
     } finally {
       setRefreshing(false);
     }
-  }, [user, mockTrips]);
+  }, [user?.driverCode, user?.driverId, user?.id, mockTrips]);
 
   useEffect(() => { loadData(); }, [loadData]);
   useFocusEffect(useCallback(() => { loadData(); }, [loadData]));
@@ -188,11 +187,19 @@ export default function DriverHomeDashboard() {
       (trips.length > 0 ? trips[0] : null);
   }, [inProgressTrip, approvedTrip, pendingApprovalTrip, trips]);
 
-  const driverName = user?.name || user?.fullName || 'Kamal Perera';
-  const driverCode = user?.driverCode || user?.username || 'DRV-00001';
-  const vehicleNumber = user?.vehicleNumber || activeTrip?.vehicleNumber || 'WP-BA-1234';
+  const driverName = driverProfile?.fullName || user?.name || user?.fullName || 'Kamal Perera';
+  const driverCode = driverProfile?.driverCode || user?.driverCode || user?.username || 'DRV-00001';
+  const vehicleNumber = driverProfile?.vehicleNumber || user?.vehicleNumber || activeTrip?.vehicleNumber || 'LY 5234';
   const initials = driverName.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase();
-  const driverPhoto = user?.profilePhoto || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=300&q=80';
+  const driverPhoto = driverProfile?.profilePhoto || user?.profilePhoto || 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=300&q=80';
+
+  // Assigned Vehicle Revenue License (Valid 1 Year, Updated by Admin)
+  const vehicleLicenseIssuedDate = driverProfile?.vehicleLicenseIssuedDate || user?.vehicleLicenseIssuedDate || '2025-11-06';
+  const vehicleLicenseExpiryDate = driverProfile?.vehicleLicenseExpiryDate || user?.vehicleLicenseExpiryDate || '2026-11-06';
+  const vehicleLicenseDaysLeft = driverProfile?.vehicleLicenseDaysLeft ?? user?.vehicleLicenseDaysLeft ?? (
+    Math.round((new Date(vehicleLicenseExpiryDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+  );
+  const vehicleLicenseRenewalDue = driverProfile?.vehicleLicenseRenewalDue ?? user?.vehicleLicenseRenewalDue ?? (vehicleLicenseDaysLeft <= 30);
 
   // Container counts for active trip
   const count20Ft = (activeTrip?.containers || []).filter((c: any) => c.size === '20FT' || c.size === 'FT_20').length;
@@ -360,6 +367,20 @@ export default function DriverHomeDashboard() {
                   <Ionicons name="bus" size={11} color="#feb300" />
                   <Text style={styles.vehiclePillText}>{vehicleNumber}</Text>
                 </View>
+                <TouchableOpacity
+                  activeOpacity={0.8}
+                  onPress={() => router.push('/(driver)/(tabs)/profile')}
+                  style={[styles.licensePill, vehicleLicenseRenewalDue && styles.licensePillDue]}
+                >
+                  <Ionicons
+                    name={vehicleLicenseRenewalDue ? 'warning' : 'shield-checkmark'}
+                    size={10}
+                    color={vehicleLicenseRenewalDue ? '#f59e0b' : '#22ef7e'}
+                  />
+                  <Text style={[styles.licensePillText, vehicleLicenseRenewalDue && { color: '#f59e0b' }]}>
+                    Lic: {vehicleLicenseExpiryDate} {vehicleLicenseRenewalDue ? `(${vehicleLicenseDaysLeft}d)` : '• 1-Yr'}
+                  </Text>
+                </TouchableOpacity>
               </View>
             </View>
           </View>
@@ -386,6 +407,33 @@ export default function DriverHomeDashboard() {
             </TouchableOpacity>
           </View>
         </View>
+
+        {/* ─── VEHICLE REVENUE LICENSE RENEWAL NOTIFICATION (Active within 1 month, disappears when renewed for 1 year) ─── */}
+        {vehicleLicenseRenewalDue && (
+          <TouchableOpacity
+            activeOpacity={0.85}
+            onPress={() => router.push('/(driver)/(tabs)/profile')}
+            style={styles.vehicleLicenseAlertCard}
+          >
+            <View style={styles.vehicleLicenseAlertIcon}>
+              <Ionicons name="warning" size={20} color="#f59e0b" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 2 }}>
+                <Text style={styles.vehicleLicenseAlertTitle}>VEHICLE LICENSE RENEWAL DUE</Text>
+                <View style={styles.vehicleLicenseBadge}>
+                  <Text style={styles.vehicleLicenseBadgeText}>
+                    {vehicleLicenseDaysLeft <= 0 ? 'EXPIRED' : `${vehicleLicenseDaysLeft} DAYS LEFT`}
+                  </Text>
+                </View>
+              </View>
+              <Text style={styles.vehicleLicenseAlertBody}>
+                Assigned Vehicle {vehicleNumber} revenue license expires on {vehicleLicenseExpiryDate} (1-year validity cycle). Admin and Supervisor have been notified. Tap to view license status.
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color="#f59e0b" />
+          </TouchableOpacity>
+        )}
 
         {/* ─── B. DRIVER SUMMARY CARDS (LIVE BACKEND METRICS) ─── */}
         <View style={styles.summaryGrid}>
@@ -3352,5 +3400,74 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '900',
     letterSpacing: 0.6,
+  },
+  licensePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#0d1d29',
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: radius.pill,
+    borderWidth: 1,
+    borderColor: '#10b98144',
+  },
+  licensePillDue: {
+    backgroundColor: '#261a06',
+    borderColor: '#f59e0b',
+  },
+  licensePillText: {
+    color: '#10b981',
+    fontSize: 9,
+    fontWeight: '800',
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+  },
+  vehicleLicenseAlertCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#261a06',
+    borderWidth: 1.5,
+    borderColor: '#f59e0b',
+    borderRadius: radius.md,
+    padding: 12,
+    marginBottom: 16,
+    gap: 12,
+    shadowColor: '#f59e0b',
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  vehicleLicenseAlertIcon: {
+    width: 32,
+    height: 32,
+    borderRadius: 8,
+    backgroundColor: '#3d2806',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  vehicleLicenseAlertTitle: {
+    color: '#fbbf24',
+    fontSize: 11,
+    fontWeight: '900',
+    letterSpacing: 0.5,
+  },
+  vehicleLicenseAlertBody: {
+    color: '#fef3c7',
+    fontSize: 10,
+    lineHeight: 15,
+    fontWeight: '600',
+    marginTop: 2,
+  },
+  vehicleLicenseBadge: {
+    backgroundColor: '#f59e0b',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  vehicleLicenseBadgeText: {
+    color: '#1f1300',
+    fontSize: 9,
+    fontWeight: '900',
+    letterSpacing: 0.4,
   },
 });
