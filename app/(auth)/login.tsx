@@ -164,7 +164,7 @@ export default function LoginScreen() {
             onPress={() => selectRole('DRIVER')}
           >
             <Ionicons
-              name="car-sport"
+              name="navigate"
               size={16}
               color={username === 'DRV-00001' ? '#00363d' : '#849396'}
             />
@@ -186,7 +186,7 @@ export default function LoginScreen() {
             onPress={() => selectRole('SUPERVISOR')}
           >
             <Ionicons
-              name="eye"
+              name="pulse"
               size={16}
               color={username.includes('supervisor') ? '#432c00' : '#849396'}
             />
@@ -217,19 +217,12 @@ export default function LoginScreen() {
 
         {/* Form Card */}
         <View style={styles.sheet}>
-          <Text style={styles.inputLabel}>
-            {username.includes('supervisor') ? 'SUPERVISOR EMAIL / USERNAME' : 'DRIVER CODE / OPERATOR ID'}
-          </Text>
+          <Text style={styles.inputLabel}>OPERATOR IDENTIFIER (DRIVER CODE / USERNAME)</Text>
           <View style={styles.inputWrap}>
-            <Ionicons
-              name={username.includes('supervisor') ? 'mail-outline' : 'person-circle-outline'}
-              size={18}
-              color={username.includes('supervisor') ? '#feb300' : '#00e5ff'}
-              style={styles.inputIcon}
-            />
+            <Ionicons name="id-card-outline" size={18} color="#00e5ff" style={styles.inputIcon} />
             <TextInput
               style={styles.input}
-              placeholder={username.includes('supervisor') ? 'supervisor@smartitt.lk' : 'Driver Code (e.g. DRV-00001)'}
+              placeholder="Driver Code (e.g. DRV-00001) or Email"
               placeholderTextColor="#849396"
               value={username}
               onChangeText={setUsername}
@@ -240,7 +233,7 @@ export default function LoginScreen() {
 
           <Text style={styles.inputLabel}>SECURITY PIN / PASSWORD</Text>
           <View style={styles.inputWrap}>
-            <Ionicons name="key-outline" size={18} color={username.includes('supervisor') ? '#feb300' : '#00e5ff'} style={styles.inputIcon} />
+            <Ionicons name="lock-closed-outline" size={18} color="#00e5ff" style={styles.inputIcon} />
             <TextInput
               style={styles.input}
               placeholder="••••••••"
@@ -250,7 +243,7 @@ export default function LoginScreen() {
               onChangeText={setPassword}
             />
             <TouchableOpacity onPress={() => setShowPassword(!showPassword)} style={styles.eyeBtn}>
-              <Ionicons name={showPassword ? 'eye-off-outline' : 'eye-outline'} size={18} color="#849396" />
+              <Ionicons name={showPassword ? 'eye-off' : 'eye'} size={18} color="#849396" />
             </TouchableOpacity>
           </View>
 
@@ -264,36 +257,18 @@ export default function LoginScreen() {
               <ActivityIndicator color="#00363d" />
             ) : (
               <>
-                <Ionicons name={username.includes('supervisor') ? 'eye' : 'car-sport'} size={20} color="#00363d" />
-                <Text style={styles.loginBtnText}>
-                  {username.includes('supervisor') ? 'LAUNCH SUPERVISOR COCKPIT' : 'LAUNCH DRIVER COCKPIT'}
-                </Text>
+                <Ionicons name="log-in" size={20} color="#00363d" />
+                <Text style={styles.loginBtnText}>AUTHENTICATE & ENTER</Text>
               </>
             )}
           </TouchableOpacity>
 
           <TouchableOpacity
             style={styles.registerBtn}
-            onPress={() => router.push({ pathname: '/(auth)/register', params: { role: 'supervisor' } })}
+            onPress={() => router.push('/(auth)/register')}
             activeOpacity={0.88}
           >
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-              <Ionicons name="briefcase-outline" size={15} color="#feb300" />
-              <Text style={[styles.registerBtnText, { color: '#feb300' }]}>
-                REGISTER NEW PORT SUPERVISOR
-              </Text>
-            </View>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.registerBtn, { marginTop: 0 }]}
-            onPress={() => router.push({ pathname: '/(auth)/register', params: { role: 'driver' } })}
-            activeOpacity={0.88}
-          >
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-              <Ionicons name="car-sport-outline" size={15} color="#00e5ff" />
-              <Text style={styles.registerBtnText}>REGISTER NEW DRIVER OPERATOR</Text>
-            </View>
+            <Text style={styles.registerBtnText}>REGISTER NEW DRIVER OPERATOR</Text>
           </TouchableOpacity>
         </View>
 

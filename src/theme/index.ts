@@ -95,7 +95,6 @@ export const radius = {
   lg: 8,
   xl: 12,
   pill: 9999,
-  full: 9999,
 };
 
 export const spacing = {

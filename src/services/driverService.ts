@@ -21,11 +21,6 @@ export interface DriverProfile {
   chassisNumber?: string;
   cheNumber?: string;
   operator?: string;
-  vehicleLicenseIssuedDate?: string;
-  vehicleLicenseExpiryDate?: string;
-  vehicleLicenseDaysLeft?: number;
-  vehicleLicenseRenewalDue?: boolean;
-  vehicleLicenseStatus?: 'VALID' | 'RENEWAL_DUE' | 'EXPIRED';
   status: string;
   createdAt?: string;
   updatedAt?: string;
